@@ -1,16 +1,22 @@
 package util;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Iterator;
 
 import org.apache.poi.hssf.usermodel.HSSFDateUtil;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFCreationHelper;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 
 public class Xls_Reader {
 	public String path;
@@ -248,79 +254,218 @@ public class Xls_Reader {
 		return true;
 
 	}
-	
+
 	// removes a column and all the contents
-		public boolean removeColumn(String sheetName, int colNum) {
-			try {
-				if (!isSheetExist(sheetName))
-					return false;
-				fis = new FileInputStream(path);
-				workbook = new XSSFWorkbook(fis);
-				sheet = workbook.getSheet(sheetName);
-				XSSFCellStyle style = workbook.createCellStyle();
-				// style.setFillForegroundColor(HSSFColor.GREY_40_PERCENT.index);
-				XSSFCreationHelper createHelper = workbook.getCreationHelper();
-				// style.setFillPattern(XSSFCellStyle.NO_FILL);
-				for (int i = 0; i < getRowCount(sheetName); i++) {
-					row = sheet.getRow(i);
-					if (row != null) {
-						cell = row.getCell(colNum);
-						if (cell != null) {
-							cell.setCellStyle(style);
-							row.removeCell(cell);
-						}
+	public boolean removeColumn(String sheetName, int colNum) {
+		try {
+			if (!isSheetExist(sheetName))
+				return false;
+			fis = new FileInputStream(path);
+			workbook = new XSSFWorkbook(fis);
+			sheet = workbook.getSheet(sheetName);
+			XSSFCellStyle style = workbook.createCellStyle();
+			// style.setFillForegroundColor(HSSFColor.GREY_40_PERCENT.index);
+			XSSFCreationHelper createHelper = workbook.getCreationHelper();
+			// style.setFillPattern(XSSFCellStyle.NO_FILL);
+			for (int i = 0; i < getRowCount(sheetName); i++) {
+				row = sheet.getRow(i);
+				if (row != null) {
+					cell = row.getCell(colNum);
+					if (cell != null) {
+						cell.setCellStyle(style);
+						row.removeCell(cell);
 					}
 				}
-				fileOut = new FileOutputStream(path);
-				workbook.write(fileOut);
-				fileOut.close();
-			} catch (Exception e) {
-				e.printStackTrace();
+			}
+			fileOut = new FileOutputStream(path);
+			workbook.write(fileOut);
+			fileOut.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+
+	}
+
+	// find whether sheets exists
+	public boolean isSheetExist(String sheetName) {
+		int index = workbook.getSheetIndex(sheetName);
+		if (index == -1) {
+			index = workbook.getSheetIndex(sheetName.toUpperCase());
+			if (index == -1)
 				return false;
-			}
-			return true;
-
-		}
-		
-		// find whether sheets exists
-		public boolean isSheetExist(String sheetName) {
-			int index = workbook.getSheetIndex(sheetName);
-			if (index == -1) {
-				index = workbook.getSheetIndex(sheetName.toUpperCase());
-				if (index == -1)
-					return false;
-				else
-					return true;
-			} else
+			else
 				return true;
-		}
-		
-		// returns number of columns in a sheet
-		public int getColumnCount(String sheetName) {
-			// check if sheet exists
-			if (!isSheetExist(sheetName))
-				return -1;
+		} else
+			return true;
+	}
 
-			sheet = workbook.getSheet(sheetName);
-			row = sheet.getRow(0);
-
-			if (row == null)
-				return -1;
-
-			return row.getLastCellNum();
-
-		}
-		public int getCellRowNum(String sheetName, String colName, String cellValue) {
-
-			for (int i = 2; i <= getRowCount(sheetName); i++) {
-				if (getCellData(sheetName, colName, i).equalsIgnoreCase(cellValue)) {
-					return i;
-				}
-			}
+	// returns number of columns in a sheet
+	public int getColumnCount(String sheetName) {
+		// check if sheet exists
+		if (!isSheetExist(sheetName))
 			return -1;
 
-		}
+		sheet = workbook.getSheet(sheetName);
+		row = sheet.getRow(0);
 
+		if (row == null)
+			return -1;
+
+		return row.getLastCellNum();
+
+	}
+
+	public int getCellRowNum(String sheetName, String colName, String cellValue) {
+
+		for (int i = 2; i <= getRowCount(sheetName); i++) {
+			if (getCellData(sheetName, colName, i).equalsIgnoreCase(cellValue)) {
+				return i;
+			}
+		}
+		return -1;
+
+	}
+
+	public Object[][] getExcelDataBasedOnStartingPoint(String sheetName, String testName) {
+		try {
+			String dataSets[][] = null;
+			/*FileInputStream file = new FileInputStream(new File(excellocation));
+
+			// Create Workbook instance holding reference to .xlsx file
+			XSSFWorkbook workbook = new XSSFWorkbook(file);
+
+			// Get first/desired sheet from the workbook
+			XSSFSheet sheet = workbook.getSheet(sheetName);*/
+			fis = new FileInputStream(path);
+			workbook = new XSSFWorkbook(fis);
+			sheet = workbook.getSheet(sheetName);
+			
+		// count number of active rows
+			int totalRow = sheet.getLastRowNum();
+			int totalColumn = 0;
+			// Iterate through each rows one by one
+			Iterator<Row> rowIterator = sheet.iterator();
+			int i = 0;
+			int count = 1;
+			while (rowIterator.hasNext() && count == 1 || count == 2) {
+				// System.out.println(i);
+
+				Row row = rowIterator.next();
+				// For each row, iterate through all the columns
+				Iterator<Cell> cellIterator = row.cellIterator();
+				int j = 0;
+				while (cellIterator.hasNext()) {
+
+					Cell cell = cellIterator.next();
+
+					if (cell.getStringCellValue().contains(testName + "end")) {
+						count = 0;
+						break;
+					}
+
+					// System.out.println(sheetName+"Start");
+					if (cell.getStringCellValue().contains(testName + "start")) {
+						// count number of active columns in row
+						totalColumn = row.getPhysicalNumberOfCells() - 1;
+						// Create array of rows and column
+						dataSets = new String[totalRow][totalColumn];
+					}
+					// System.out.println(sheetName+"Start");
+					if (cell.getStringCellValue().contains(testName + "start") || count == 2) {
+						System.out.println(sheetName + "start");
+						count = 2;
+						// Check the cell type and format accordingly
+
+						switch (cell.getCellType().name().toUpperCase()) {
+						case "NUMERIC":
+							dataSets[i - 1][j++] = cell.getStringCellValue();
+							System.out.println(cell.getNumericCellValue());
+							break;
+						case "STRING":
+							if (!cell.getStringCellValue().contains(testName + "start")) {
+								dataSets[i - 1][j++] = cell.getStringCellValue();
+								System.out.println(cell.getStringCellValue());
+							}
+							break;
+						case "BOOLEAN":
+							dataSets[i - 1][j++] = cell.getStringCellValue();
+							System.out.println(cell.getStringCellValue());
+							break;
+						case "FORMULA":
+							dataSets[i - 1][j++] = cell.getStringCellValue();
+							System.out.println(cell.getStringCellValue());
+							break;
+						}
+
+					}
+				}
+
+				System.out.println("");
+				i++;
+			}
+			///////file.close();
+
+			return parseData(dataSets, totalColumn);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * This method is used to remove unwanted null data from array
+	 * 
+	 * @param data
+	 * @return
+	 */
+	public Object[][] parseData(Object[][] data, int colSize) {
+		// Creating array list to store data;
+		ArrayList<ArrayList<String>> list = new ArrayList<ArrayList<String>>();
+
+		// This array list will store one Array index data, every array index
+		// has three sets of data
+		ArrayList<String> list1;
+
+		System.out.println(data.length);
+
+		// running for loop on array size
+		for (int i = 0; i < data.length; i++) {
+			// creates a list to store the elements != null
+
+			System.out.println(data[i].length);
+
+			list1 = new ArrayList<String>();
+			// this for loop will run on array index, since each array index has
+			// three sets of data
+			for (int j = 0; j < data[i].length; j++) {
+				// this if will check null
+				if (data[i][j] != null) {
+					list1.add((String) data[i][j]);
+				}
+			}
+			// once all one array index data is entered in arrayList , then
+			// putting this object in parent arrayList
+			if (list1.size() > 0) {
+				list.add(list1);
+			}
+		}
+		// convert array List Data into 2D Array
+		Object[][] arr2d = new Object[list.size()][colSize];
+		// run loop on array list data
+		for (int i = 0; i < list.size(); i++) {
+			// every array list index has arryList inside
+			ArrayList<String> t = list.get(i);
+			// run loop on inner array List
+			for (int j = 0; j < t.size(); j++) {
+				arr2d[i][j] = t.get(j);
+			}
+		}
+		System.out.println(list);
+		System.out.println(arr2d);
+		return arr2d;
+	}
 
 	public static void main(String[] args) {
 		Xls_Reader reader = new Xls_Reader("d:/Test.xlsx");
@@ -336,16 +481,26 @@ public class Xls_Reader {
 		reader.addSheet("newSheet");
 
 		reader.removeSheet("newSheet");
-		
+
 		reader.addColumn("Sheet1", "newColumn");
-		
+
 		reader.removeColumn("Sheet1", 3);
-		
+
 		reader.getColumnCount("Sheet1");
-		
+
 		int rowNumber = reader.getCellRowNum("Sheet1", "contactName", "dharitree");
-		System.out.println("row number *******"+rowNumber);
+		System.out.println("row number *******" + rowNumber);
+		
+		//String excellocation = "d:/demo.xlsx";
+		String sheetName = "masterData";
+		Xls_Reader excel = new Xls_Reader("d:/demo.xlsx");
+		
+		Object[][] data = excel.getExcelDataBasedOnStartingPoint(sheetName, "leadsCreation");
+		
+		System.out.println(data);
+		
+	}
 
 	}
 
-}
+
